@@ -1,0 +1,226 @@
+!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Clínicas - Podologia & Estética</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+    <!-- Header -->
+    <header id="main-header" class="bg-teal-700 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <span class="text-2xl">🌱</span>
+                <div>
+                    <h1 id="app-title" class="font-bold text-lg leading-tight">Clínica Bem-Estar</h1>
+                    <p class="text-xs text-teal-100">Painel de Gestão</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="openSettings()" class="p-2 rounded-lg bg-teal-800/50 hover:bg-teal-600 transition text-sm">⚙️ Ajustes</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-md mx-auto w-full p-4 flex-1 pb-20">
+        <!-- Dashboard / Stats -->
+        <section class="grid grid-cols-2 gap-3 mb-6">
+            <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
+                <p class="text-xs text-slate-500 font-medium">Agendamentos Hoje</p>
+                <h3 id="stat-count" class="text-2xl font-bold text-teal-700 mt-1">0</h3>
+            </div>
+            <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
+                <p class="text-xs text-slate-500 font-medium">Faturamento Est.</p>
+                <h3 id="stat-revenue" class="text-xl font-bold text-teal-700 mt-1">R$ 0,00</h3>
+            </div>
+        </section>
+
+        <!-- Navigation Tabs -->
+        <div class="flex bg-slate-200/70 p-1 rounded-xl mb-5 text-sm font-medium">
+            <button onclick="switchTab('agenda')" id="tab-agenda" class="flex-1 py-2 rounded-lg bg-white text-teal-700 shadow-sm transition">Agenda</button>
+            <button onclick="switchTab('services')" id="tab-services" class="flex-1 py-2 rounded-lg text-slate-600 transition">Serviços</button>
+            <button onclick="switchTab('staff')" id="tab-staff" class="flex-1 py-2 rounded-lg text-slate-600 transition">Equipe</button>
+        </div>
+
+        <!-- TAB 1: AGENDA -->
+        <div id="section-agenda" class="space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-slate-700">Agenda do Dia</h2>
+                <button onclick="openNewAppointmentModal()" class="bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold px-3 py-2 rounded-xl transition shadow-sm">+ Novo Horário</button>
+            </div>
+            <div id="appointments-list" class="space-y-3">
+                <!-- Dynamically loaded -->
+            </div>
+        </div>
+
+        <!-- TAB 2: SERVICES -->
+        <div id="section-services" class="space-y-4 hidden">
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-slate-700">Serviços & Preços</h2>
+                <button onclick="openNewServiceModal()" class="bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold px-3 py-2 rounded-xl transition shadow-sm">+ Novo Serviço</button>
+            </div>
+            <div id="services-list" class="space-y-3">
+                <!-- Dynamically loaded -->
+            </div>
+        </div>
+
+        <!-- TAB 3: STAFF -->
+        <div id="section-staff" class="space-y-4 hidden">
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-slate-700">Equipe de Profissionais</h2>
+                <button onclick="openNewStaffModal()" class="bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold px-3 py-2 rounded-xl transition shadow-sm">+ Adicionar</button>
+            </div>
+            <div id="staff-list" class="space-y-3">
+                <!-- Dynamically loaded -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals & Scripts Engine -->
+    <script>
+        let db = JSON.parse(localStorage.getItem('clinic_db_v1')) || {
+            name: "Clínica Bem-Estar",
+            theme: "teal",
+            services: [
+                { id: 1, name: "Podologia Básica", price: 90, promo: 75, desc: "Corte técnico, higienização e assepsia." },
+                { id: 2, name: "Tratamento de Unha Incarc", price: 110, promo: 99, desc: "Alívio imediato e correção ungueal." },
+                { id: 3, name: "Manicure & Esmaltação", price: 50, promo: 40, desc: "Cutilagem completa e esmalte à escolha." }
+            ],
+            staff: [
+                { id: 1, name: "Ana Paula", role: "Podóloga Chefe" },
+                { id: 2, name: "Carla Souza", role: "Manicure & Esteticista" }
+            ],
+            appointments: [
+                { id: 1, client: "Maria Silva", service: "Podologia Básica", time: "09:00", staff: "Ana Paula", price: 75, status: "Agendado" },
+                { id: 2, client: "João Pedro", service: "Manicure & Esmaltação", time: "10:30", staff: "Carla Souza", price: 40, status: "Concluído" }
+            ]
+        };
+
+        function saveData() {
+            localStorage.setItem('clinic_db_v1', JSON.stringify(db));
+            render();
+        }
+
+        function switchTab(tab) {
+            ['agenda', 'services', 'staff'].forEach(t => {
+                document.getElementById(`section-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).className = "flex-1 py-2 rounded-lg text-slate-600 transition";
+            });
+            document.getElementById(`section-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).className = "flex-1 py-2 rounded-lg bg-white text-teal-700 shadow-sm transition font-medium";
+        }
+
+        function render() {
+            document.getElementById('app-title').innerText = db.name;
+            document.getElementById('stat-count').innerText = db.appointments.length;
+            
+            let totalRev = db.appointments.reduce((acc, curr) => acc + (curr.price || 0), 0);
+            document.getElementById('stat-revenue').innerText = `R$ ${totalRev.toFixed(2).replace('.', ',')}`;
+
+            let appHtml = '';
+            if (db.appointments.length === 0) {
+                appHtml = `<div class="bg-white p-6 rounded-2xl text-center text-slate-400 text-sm border border-slate-100">Nenhum agendamento para hoje.</div>`;
+            } else {
+                db.appointments.forEach((a, index) => {
+                    appHtml += `
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
+                            <div>
+                                <span class="inline-block bg-teal-50 text-teal-700 font-bold text-xs px-2 py-0.5 rounded-md mb-1">⏰ ${a.time}</span>
+                                <h4 class="font-bold text-slate-800 text-sm">${a.client}</h4>
+                                <p class="text-xs text-slate-500">${a.service} • <span class="text-teal-600 font-medium">${a.staff}</span></p>
+                            </div>
+                            <div class="text-right">
+                                <span class="block font-bold text-sm text-slate-700">R$ ${a.price.toFixed(2).replace('.', ',')}</span>
+                                <button onclick="removeAppointment(${index})" class="text-red-400 hover:text-red-600 text-xs mt-1">Excluir</button>
+                            </div>
+                        </div>`;
+                });
+            }
+            document.getElementById('appointments-list').innerHTML = appHtml;
+
+            let srvHtml = '';
+            db.services.forEach((s, index) => {
+                let hasPromo = s.promo && s.promo < s.price;
+                srvHtml += `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">${s.name}</h4>
+                            <p class="text-xs text-slate-400 mb-1">${s.desc}</p>
+                            <div>
+                                ${hasPromo ? `<span class="text-xs text-slate-400 line-through mr-1">R$ ${s.price.toFixed(2).replace('.', ',')}</span> <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">R$ ${s.promo.toFixed(2).replace('.', ',')} (Promo)</span>` : `<span class="text-xs font-bold text-teal-700">R$ ${s.price.toFixed(2).replace('.', ',')}</span>`}
+                            </div>
+                        </div>
+                        <button onclick="removeService(${index})" class="text-red-400 hover:text-red-600 text-xs">Excluir</button>
+                    </div>`;
+            });
+            document.getElementById('services-list').innerHTML = srvHtml;
+
+            let stfHtml = '';
+            db.staff.forEach((st, index) => {
+                stfHtml += `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">👤 ${st.name}</h4>
+                            <p class="text-xs text-slate-500">${st.role}</p>
+                        </div>
+                        <button onclick="removeStaff(${index})" class="text-red-400 hover:text-red-600 text-xs">Excluir</button>
+                    </div>`;
+            });
+            document.getElementById('staff-list').innerHTML = stfHtml;
+        }
+
+        function openNewAppointmentModal() {
+            let client = prompt("Nome da cliente:");
+            if (!client) return;
+            let service = prompt("Nome do serviço:") || "Atendimento";
+            let time = prompt("Horário (ex: 14:00):") || "12:00";
+            let staff = prompt("Profissional responsável:") || "Equipe";
+            let price = parseFloat(prompt("Valor (ex: 80.00):") || "80");
+            db.appointments.push({ client, service, time, staff, price, status: "Agendado" });
+            saveData();
+        }
+
+        function openNewServiceModal() {
+            let name = prompt("Nome do novo serviço:");
+            if (!name) return;
+            let price = parseFloat(prompt("Preço normal:") || "90");
+            let promo = parseFloat(prompt("Preço promocional (ou 0):") || "0");
+            let desc = prompt("Descrição:") || "";
+            db.services.push({ id: Date.now(), name, price, promo, desc });
+            saveData();
+        }
+
+        function openNewStaffModal() {
+            let name = prompt("Nome da profissional:");
+            if (!name) return;
+            let role = prompt("Função:") || "Especialista";
+            db.staff.push({ id: Date.now(), name, role });
+            saveData();
+        }
+
+        function removeAppointment(i) {
+            if (confirm("Remover agendamento?")) { db.appointments.splice(i, 1); saveData(); }
+        }
+        function removeService(i) {
+            if (confirm("Remover serviço?")) { db.services.splice(i, 1); saveData(); }
+        }
+        function removeStaff(i) {
+            if (confirm("Remover profissional?")) { db.staff.splice(i, 1); saveData(); }
+        }
+
+        function openSettings() {
+            let newName = prompt("Nome da Clínica:", db.name);
+            if (newName) db.name = newName;
+            saveData();
+        }
+
+        render();
+    </script>
+</body>
+</html>
